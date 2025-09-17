@@ -9,6 +9,27 @@ type WhackAMoleTypes = {
   molesAppearingInterval: number;
 };
 
+function shuffle(array: number[]) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+function generateMolesHole(
+  molesAtOnce: number,
+  totalCount: number
+): Set<number> {
+  // Generate a list of indices -> [0, totalCount - 1]
+  const indices = Array.from({ length: totalCount }, (_, idx) => idx);
+  // Shuffle indices
+  shuffle(indices);
+  // Extract the first random hole
+  const shuffleIndices = indices.slice(0, molesAtOnce);
+  // place in set
+  return new Set(shuffleIndices);
+}
+
 export default function WhackAMole({
   rows,
   cols,
@@ -16,17 +37,46 @@ export default function WhackAMole({
   molesAtOnce,
   molesAppearingInterval,
 }: WhackAMoleTypes) {
-  const [count, setCount] = useState(10);
+  const [count, setCount] = useState(roundDuration);
   const [isRunning, setIsRunning] = useState(false);
   const [score, setScore] = useState<number | null>(null);
-  const [isVisible, setIsVisible] = useState(new Set());
-  const intervalRef = useRef<number | null>(null);
+  const [isVisible, setIsVisible] = useState<Set<number>>(new Set());
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const totalCount = rows * cols;
+
+  // Moles need to move programatically, based on if the game isRunning
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval>;
+
+    if (isRunning) {
+      intervalId = setInterval(() => {
+        setIsVisible(generateMolesHole(molesAtOnce, totalCount));
+      }, molesAppearingInterval);
+    }
+
+    return () => {
+      clearInterval(intervalId);
+      setIsVisible(new Set());
+    };
+  }, [isRunning, molesAtOnce, totalCount, molesAppearingInterval]);
+
+  const handleClick = (idx: number) => {
+    if (!isVisible.has(idx)) return;
+
+    setIsVisible((prevIsVisible) => {
+      const visible = new Set(prevIsVisible);
+      visible.delete(idx);
+      return visible;
+    });
+
+    setScore((prevScore) => (prevScore ?? 0) + 1);
+  };
 
   const handleCountdown = () => {
     setScore(0);
-    setCount(10);
+    setCount(roundDuration);
     setIsRunning(true);
+
     intervalRef.current = setInterval(() => {
       setCount((prevCount) => {
         if (prevCount > 0) {
@@ -76,7 +126,13 @@ export default function WhackAMole({
         }}
       >
         {Array.from({ length: totalCount }, (_, idx) => {
-          return <GridCell key={idx} />;
+          return (
+            <GridCell
+              key={idx}
+              filled={isVisible.has(idx)}
+              onClick={() => handleClick(idx)}
+            />
+          );
         })}
       </div>
     </div>

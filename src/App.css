@@ -84,5 +84,5 @@ header {
 }
 
 .mole-head--visible {
-  transform: translate(50%, 0%);
+  transform: translate(-50%, 0%);
 }

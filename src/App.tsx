@@ -6,7 +6,7 @@ export default function App() {
       rows={3}
       cols={3}
       roundDuration={15}
-      molesAtOnce={1}
+      molesAtOnce={2}
       molesAppearingInterval={1500}
     />
   );
